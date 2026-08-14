@@ -12,10 +12,18 @@ class Config:
     """Base configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'ngo-app-secret-key-default-2026-development')
     
-    # SQLite Database URI
-    # Default to instance/ngo.db
-    INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+    # Check if running on Vercel serverless environment
+    IS_VERCEL = os.environ.get('VERCEL') == '1' or 'VERCEL' in os.environ
+    
+    if IS_VERCEL:
+        INSTANCE_DIR = '/tmp'
+        UPLOAD_FOLDER = '/tmp/uploads'
+    else:
+        INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
+        UPLOAD_FOLDER = os.path.join(BASE_DIR, 'app', 'static', 'uploads')
+
     os.makedirs(INSTANCE_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL',
@@ -23,8 +31,6 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Uploads config
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 5 * 1024 * 1024))  # 5 MB
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     
