@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Session: {{ session.title }}{% endblock %}
+{% block page_heading %}Session Dossier{% endblock %}
+
+{% block content %}
+<!-- Session Header Info -->
+<div class="card-custom mb-4">
+  <div class="card-body-custom">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+          <h4 class="fw-bold mb-0 text-dark">{{ session.title }}</h4>
+          <span class="badge badge-soft-primary">{{ session.session_type }}</span>
+          {% if session.status == 'Completed' %}
+            <span class="badge badge-soft-success">Completed</span>
+          {% elif session.status == 'Scheduled' %}
+            <span class="badge badge-soft-primary">Scheduled</span>
+          {% else %}
+            <span class="badge badge-soft-danger">Cancelled</span>
+          {% endif %}
+        </div>
+        <p class="text-muted small mb-0">
+          <i class="bi bi-calendar3 me-1"></i> {{ session.date | date_format }} &bull; 
+          <i class="bi bi-clock me-1"></i> {{ session.start_time | time_format }} - {{ session.end_time | time_format }} &bull; 
+          <i class="bi bi-geo-alt me-1"></i> {{ session.location or 'Main Facility' }} &bull; 
+          <i class="bi bi-person-badge me-1"></i> Instructor: <strong>{{ session.teacher.full_name if session.teacher else 'Unassigned' }}</strong>
+        </p>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('sessions.mark_attendance', session_id=session.id) }}" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+          <i class="bi bi-check2-square me-1"></i> Mark / Edit Attendance
+        </a>
+        {% if current_user.is_admin or session.teacher_id == current_user.id %}
+          <a href="{{ url_for('sessions.edit', session_id=session.id) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-pencil me-1"></i> Edit
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if session.description %}
+      <div class="mt-3 pt-3 border-top small text-secondary">
+        <strong>Session Agenda & Description:</strong>
+        <p class="mb-0 mt-1">{{ session.description }}</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Attendance Stats Summary Bar -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center">
+      <div class="text-muted small text-uppercase fw-bold">Total Students Marked</div>
+      <h3 class="fw-bold text-dark mb-0">{{ summary.total }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center border-start border-success border-4">
+      <div class="text-muted small text-uppercase fw-bold">Present</div>
+      <h3 class="fw-bold text-success mb-0">{{ summary.present }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center border-start border-warning border-4">
+      <div class="text-muted small text-uppercase fw-bold">Late</div>
+      <h3 class="fw-bold text-warning mb-0">{{ summary.late }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center border-start border-danger border-4">
+      <div class="text-muted small text-uppercase fw-bold">Absent</div>
+      <h3 class="fw-bold text-danger mb-0">{{ summary.absent }}</h3>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Records Table -->
+<div class="card-custom">
+  <div class="card-header-custom">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-card-checklist text-primary"></i>
+      <span>Attendance Roster</span>
+    </div>
+    <span class="badge badge-soft-info">Rate: {{ summary.rate }}%</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Student ID</th>
+          <th>Student Name</th>
+          <th>Class / Grade</th>
+          <th>Attendance Status</th>
+          <th>Remarks</th>
+          <th>Recorded By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in attendance_records %}
+        <tr>
+          <td><span class="badge badge-soft-primary font-monospace">{{ r.student.student_id }}</span></td>
+          <td>
+            <a href="{{ url_for('students.view', student_id=r.student.id) }}" class="fw-semibold text-dark text-decoration-none">
+              {{ r.student.full_name }}
+            </a>
+          </td>
+          <td>{{ r.student.grade_class or 'N/A' }}</td>
+          <td>
+            {% if r.status == 'Present' %}
+              <span class="badge badge-soft-success"><i class="bi bi-check-circle me-1"></i> Present</span>
+            {% elif r.status == 'Late' %}
+              <span class="badge badge-soft-warning"><i class="bi bi-clock-history me-1"></i> Late</span>
+            {% else %}
+              <span class="badge badge-soft-danger"><i class="bi bi-x-circle me-1"></i> Absent</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted">{{ r.remarks or '-' }}</td>
+          <td class="small text-muted">{{ r.marked_by.full_name if r.marked_by else 'Staff' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-5">
+            <i class="bi bi-card-checklist display-4 d-block mb-3 opacity-50"></i>
+            <h5>Attendance has not been marked yet for this session.</h5>
+            <p class="small">Click "Mark Attendance" to record student attendance.</p>
+            <a href="{{ url_for('sessions.mark_attendance', session_id=session.id) }}" class="btn btn-primary btn-sm rounded-pill px-3">
+              <i class="bi bi-check2-square me-1"></i> Mark Attendance Now
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

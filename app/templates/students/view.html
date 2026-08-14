@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.full_name }} ({{ student.student_id }}){% endblock %}
+{% block page_heading %}Student Profile{% endblock %}
+
+{% block content %}
+<!-- Student Header Card -->
+<div class="card-custom mb-4">
+  <div class="card-body-custom">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div class="d-flex align-items-center gap-3">
+        {% if student.profile_photo %}
+          <img src="{{ url_for('static', filename='uploads/' + student.profile_photo) }}" alt="{{ student.full_name }}" class="student-avatar">
+        {% else %}
+          <div class="student-avatar-placeholder">{{ student.full_name[:1] }}</div>
+        {% endif %}
+
+        <div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <h4 class="fw-bold mb-0 text-dark">{{ student.full_name }}</h4>
+            <span class="badge badge-soft-primary font-monospace">{{ student.student_id }}</span>
+            {% if student.status == 'Active' %}
+              <span class="badge badge-soft-success">Active</span>
+            {% elif student.status == 'Graduated' %}
+              <span class="badge badge-soft-info">Graduated</span>
+            {% elif student.status == 'On Leave' %}
+              <span class="badge badge-soft-warning">On Leave</span>
+            {% else %}
+              <span class="badge badge-soft-secondary">{{ student.status }}</span>
+            {% endif %}
+          </div>
+          <p class="text-muted mb-0 small mt-1">
+            <i class="bi bi-mortarboard me-1"></i> {{ student.grade_class or 'Grade N/A' }} &bull; {{ student.school_name or 'School N/A' }} &bull; Joined {{ student.joining_date | date_format }}
+          </p>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('feedback.create', student_id=student.id) }}" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm">
+          <i class="bi bi-chat-quote-fill me-1"></i> Add Feedback
+        </a>
+        <a href="{{ url_for('students.edit', student_id=student.id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+          <i class="bi bi-pencil me-1"></i> Edit
+        </a>
+        <a href="{{ url_for('reports.student_report', student_id=student.id) }}" class="btn btn-light btn-sm rounded-pill px-3">
+          <i class="bi bi-printer me-1"></i> Printable Report
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Performance Summary Row -->
+<div class="row g-3 mb-4">
+  <!-- Attendance Percentage -->
+  <div class="col-md-4">
+    <div class="card-custom p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted small fw-bold text-uppercase">Attendance Rate</span>
+        <span class="badge badge-soft-primary"><i class="bi bi-calendar-check"></i> {{ attendance_stats.total }} Sessions</span>
+      </div>
+      <div class="d-flex align-items-baseline gap-2">
+        <h2 class="fw-bold text-primary mb-0">{{ attendance_stats.percentage }}%</h2>
+      </div>
+      <div class="progress mt-2" style="height: 6px;">
+        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ attendance_stats.percentage }}%"></div>
+      </div>
+      <div class="d-flex justify-content-between text-muted small mt-2">
+        <span><strong class="text-success">{{ attendance_stats.present }}</strong> Present</span>
+        <span><strong class="text-warning">{{ attendance_stats.late }}</strong> Late</span>
+        <span><strong class="text-danger">{{ attendance_stats.absent }}</strong> Absent</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Rating -->
+  <div class="col-md-4">
+    <div class="card-custom p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted small fw-bold text-uppercase">Average Rating</span>
+        <span class="badge badge-soft-warning"><i class="bi bi-chat-left-quote"></i> {{ feedbacks | length }} Reviews</span>
+      </div>
+      <div class="d-flex align-items-baseline gap-2">
+        <h2 class="fw-bold text-warning mb-0">{{ student.average_rating or 'N/A' }}</h2>
+        {% if student.average_rating %}
+          <span class="text-muted small">/ 5.0</span>
+        {% endif %}
+      </div>
+      <div class="rating-stars mt-1">
+        {% if student.average_rating %}
+          {% for i in range(1, 6) %}
+            {% if i <= student.average_rating | round | int %}
+              <i class="bi bi-star-fill text-warning"></i>
+            {% else %}
+              <i class="bi bi-star text-muted"></i>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <span class="text-muted small">No feedback recorded yet</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Bio Snapshot -->
+  <div class="col-md-4">
+    <div class="card-custom p-3 h-100">
+      <span class="text-muted small fw-bold text-uppercase d-block mb-2">Contact & Guardian</span>
+      <div class="small">
+        <div class="mb-1"><i class="bi bi-person me-1 text-muted"></i> Guardian: <strong>{{ student.parent_name or 'N/A' }}</strong></div>
+        <div class="mb-1"><i class="bi bi-telephone me-1 text-muted"></i> Phone: <strong>{{ student.phone or 'N/A' }}</strong></div>
+        {% if age is not none %}
+          <div><i class="bi bi-cake2 me-1 text-muted"></i> Age: <strong>{{ age }} years</strong> ({{ student.dob | date_format }})</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs for Bio, Feedback History, Attendance -->
+<div class="card-custom">
+  <div class="card-header-custom p-0 border-bottom">
+    <ul class="nav nav-tabs border-0 px-3" id="studentTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active py-3 fw-semibold" id="feedback-tab" data-bs-toggle="tab" data-bs-target="#feedback" type="button" role="tab">
+          <i class="bi bi-chat-square-quote-fill me-1"></i> Weekly Feedback & Progress ({{ feedbacks | length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-3 fw-semibold" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance" type="button" role="tab">
+          <i class="bi bi-calendar2-check-fill me-1"></i> Attendance Log ({{ recent_attendances | length }})
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link py-3 fw-semibold" id="bio-tab" data-bs-toggle="tab" data-bs-target="#bio" type="button" role="tab">
+          <i class="bi bi-person-lines-fill me-1"></i> Full Bio & Notes
+        </button>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card-body-custom tab-content" id="studentTabContent">
+    <!-- TAB 1: WEEKLY FEEDBACK TIMELINE & PROGRESS CHART -->
+    <div class="tab-pane fade show active" id="feedback" role="tabpanel">
+      {% if feedbacks %}
+        <!-- Feedback Rating Trend Line Chart -->
+        {% if feedback_dates | length > 1 %}
+        <div class="p-3 bg-light rounded-3 mb-4">
+          <h6 class="fw-bold text-dark mb-2"><i class="bi bi-graph-up-arrow me-1 text-primary"></i> Progress Rating Trend Over Time</h6>
+          <div style="height: 180px;">
+            <canvas id="studentProgressChart"></canvas>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Chronological Feedback Timeline -->
+        <div class="feedback-timeline">
+          {% for f in feedbacks %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="card border rounded-3 p-3 shadow-sm bg-white">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <div>
+                  <span class="badge {{ f.rating_badge_class }} me-2">{{ f.rating }} ★ {{ f.rating_label }}</span>
+                  <strong class="text-dark">{{ f.subject_area or 'General Development' }}</strong>
+                </div>
+                <div class="text-muted small">
+                  <i class="bi bi-calendar-event me-1"></i> {{ f.feedback_date | date_format }} &bull; Teacher: <strong>{{ f.teacher.full_name if f.teacher else 'Staff' }}</strong>
+                </div>
+              </div>
+
+              {% if f.academic_progress %}
+                <div class="mb-2 small">
+                  <span class="text-muted fw-semibold">Academic Progress:</span> {{ f.academic_progress }}
+                </div>
+              {% endif %}
+
+              {% if f.behaviour or f.participation %}
+                <div class="row small mb-2 text-muted">
+                  {% if f.behaviour %}
+                    <div class="col-md-6"><strong>Behaviour:</strong> {{ f.behaviour }}</div>
+                  {% endif %}
+                  {% if f.participation %}
+                    <div class="col-md-6"><strong>Participation:</strong> {{ f.participation }}</div>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              {% if f.strengths or f.improvement_areas %}
+                <div class="row small mb-2">
+                  {% if f.strengths %}
+                    <div class="col-md-6 text-success"><i class="bi bi-hand-thumbs-up me-1"></i><strong>Strengths:</strong> {{ f.strengths }}</div>
+                  {% endif %}
+                  {% if f.improvement_areas %}
+                    <div class="col-md-6 text-danger"><i class="bi bi-arrow-up-circle me-1"></i><strong>Focus Areas:</strong> {{ f.improvement_areas }}</div>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              {% if f.comments %}
+                <div class="small bg-light p-2 rounded text-secondary mt-1">
+                  <em>"{{ f.comments }}"</em>
+                </div>
+              {% endif %}
+
+              <div class="d-flex justify-content-end gap-2 mt-2 pt-2 border-top">
+                <a href="{{ url_for('feedback.view', feedback_id=f.id) }}" class="btn btn-sm btn-link p-0 text-primary small">Full Details</a>
+                {% if current_user.is_admin or f.teacher_id == current_user.id %}
+                  <a href="{{ url_for('feedback.edit', feedback_id=f.id) }}" class="btn btn-sm btn-link p-0 text-secondary small">Edit</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-chat-quote display-4 d-block mb-3 opacity-50"></i>
+          <h5>No weekly feedback submitted yet.</h5>
+          <p class="small">Submit observations and ratings to track this student's progress.</p>
+          <a href="{{ url_for('feedback.create', student_id=student.id) }}" class="btn btn-primary btn-sm rounded-pill px-3">
+            <i class="bi bi-plus-lg me-1"></i> Add First Feedback
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB 2: ATTENDANCE HISTORY -->
+    <div class="tab-pane fade" id="attendance" role="tabpanel">
+      {% if recent_attendances %}
+        <div class="table-responsive">
+          <table class="table-custom">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Session Title</th>
+                <th>Instructor</th>
+                <th>Status</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for att in recent_attendances %}
+              <tr>
+                <td>{{ att.session.date | date_format }}</td>
+                <td>
+                  <a href="{{ url_for('sessions.view', session_id=att.session.id) }}" class="fw-semibold text-dark text-decoration-none">
+                    {{ att.session.title }}
+                  </a>
+                  <div class="small text-muted">{{ att.session.session_type }}</div>
+                </td>
+                <td>{{ att.session.teacher.full_name if att.session.teacher else 'N/A' }}</td>
+                <td>
+                  {% if att.status == 'Present' %}
+                    <span class="badge badge-soft-success"><i class="bi bi-check-circle me-1"></i> Present</span>
+                  {% elif att.status == 'Late' %}
+                    <span class="badge badge-soft-warning"><i class="bi bi-clock-history me-1"></i> Late</span>
+                  {% else %}
+                    <span class="badge badge-soft-danger"><i class="bi bi-x-circle me-1"></i> Absent</span>
+                  {% endif %}
+                </td>
+                <td class="small text-muted">{{ att.remarks or '-' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-calendar-x display-4 d-block mb-3 opacity-50"></i>
+          <h5>No attendance records yet.</h5>
+          <p class="small">Attendance marked during scheduled sessions will appear here.</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- TAB 3: FULL BIO & NOTES -->
+    <div class="tab-pane fade" id="bio" role="tabpanel">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <h6 class="fw-bold text-primary mb-3">Personal & Academic Details</h6>
+          <table class="table table-bordered small">
+            <tr>
+              <th class="bg-light" style="width: 40%;">Full Name</th>
+              <td>{{ student.full_name }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Student ID</th>
+              <td><span class="badge badge-soft-primary font-monospace">{{ student.student_id }}</span></td>
+            </tr>
+            <tr>
+              <th class="bg-light">Date of Birth</th>
+              <td>{{ student.dob | date_format if student.dob else 'Not specified' }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Gender</th>
+              <td>{{ student.gender }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Class / Grade</th>
+              <td>{{ student.grade_class or 'N/A' }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">School / Institution</th>
+              <td>{{ student.school_name or 'N/A' }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Joining Date</th>
+              <td>{{ student.joining_date | date_format }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Status</th>
+              <td>{{ student.status }}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="col-md-6">
+          <h6 class="fw-bold text-primary mb-3">Guardian & Residential Information</h6>
+          <table class="table table-bordered small">
+            <tr>
+              <th class="bg-light" style="width: 40%;">Parent / Guardian</th>
+              <td>{{ student.parent_name or 'N/A' }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Phone Number</th>
+              <td>{{ student.phone or 'N/A' }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Email Address</th>
+              <td>{{ student.email or 'N/A' }}</td>
+            </tr>
+            <tr>
+              <th class="bg-light">Address</th>
+              <td>{{ student.address or 'N/A' }}</td>
+            </tr>
+          </table>
+
+          <h6 class="fw-bold text-primary mt-4 mb-2">Special Notes & Medical Background</h6>
+          <div class="p-3 bg-light rounded-3 small">
+            {{ student.notes or 'No special notes or medical requirements recorded.' }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if feedback_dates | length > 1 %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const ctx = document.getElementById('studentProgressChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ feedback_dates | tojson }},
+        datasets: [{
+          label: 'Rating Score (1-5)',
+          data: {{ feedback_ratings | tojson }},
+          borderColor: '#0284c7',
+          backgroundColor: 'rgba(2, 132, 199, 0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#0284c7'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            min: 1,
+            max: 5,
+            ticks: { stepSize: 1 }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

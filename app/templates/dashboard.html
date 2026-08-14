@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Overview{% endblock %}
+{% block page_heading %}Dashboard & Insights{% endblock %}
+
+{% block content %}
+<!-- KPI Stats Row -->
+<div class="row g-3 mb-4">
+  <!-- Total Students -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card primary">
+      <div>
+        <div class="stat-number">{{ total_students }}</div>
+        <div class="stat-label">Total Students</div>
+        <small class="text-success fw-medium"><i class="bi bi-check-circle-fill"></i> {{ active_students }} Active</small>
+      </div>
+      <div class="stat-icon primary">
+        <i class="bi bi-mortarboard-fill"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teachers / Staff -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card success">
+      <div>
+        <div class="stat-number">{{ total_staff }}</div>
+        <div class="stat-label">Active Staff & Teachers</div>
+        <small class="text-muted"><i class="bi bi-people"></i> Mentors & Instructors</small>
+      </div>
+      <div class="stat-icon success">
+        <i class="bi bi-person-workspace"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sessions -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card warning">
+      <div>
+        <div class="stat-number">{{ total_sessions }}</div>
+        <div class="stat-label">Total Sessions</div>
+        <small class="text-muted"><i class="bi bi-calendar-check"></i> Classes & Workshops</small>
+      </div>
+      <div class="stat-icon warning">
+        <i class="bi bi-calendar-event-fill"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overall Attendance Rate -->
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card info">
+      <div>
+        <div class="stat-number">{{ overall_attendance_pct }}%</div>
+        <div class="stat-label">Attendance Rate</div>
+        <small class="text-muted">{{ total_attendances }} records logged</small>
+      </div>
+      <div class="stat-icon info">
+        <i class="bi bi-check2-all"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+  <!-- Rating Score Distribution Chart -->
+  <div class="col-lg-7">
+    <div class="card-custom h-100">
+      <div class="card-header-custom">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-bar-chart-fill text-primary"></i>
+          <span>Student Feedback Rating Distribution</span>
+        </div>
+        <a href="{{ url_for('feedback.index') }}" class="btn btn-sm btn-outline-primary py-1 px-2 small">View All</a>
+      </div>
+      <div class="card-body-custom">
+        <div style="height: 250px;">
+          <canvas id="feedbackRatingChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Status Donut Chart -->
+  <div class="col-lg-5">
+    <div class="card-custom h-100">
+      <div class="card-header-custom">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-pie-chart-fill text-info"></i>
+          <span>Overall Attendance Breakdown</span>
+        </div>
+        <a href="{{ url_for('reports.attendance_report') }}" class="btn btn-sm btn-outline-info py-1 px-2 small">Report</a>
+      </div>
+      <div class="card-body-custom d-flex align-items-center justify-content-center">
+        <div style="height: 230px; width: 100%;">
+          <canvas id="attendanceDonutChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity Tables Row -->
+<div class="row g-4">
+  <!-- Upcoming / Recent Sessions -->
+  <div class="col-lg-6">
+    <div class="card-custom h-100">
+      <div class="card-header-custom">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-calendar-week text-primary"></i>
+          <span>Recent & Upcoming Sessions</span>
+        </div>
+        <a href="{{ url_for('sessions.create') }}" class="btn btn-sm btn-primary py-1 px-2 small">
+          <i class="bi bi-plus-lg"></i> Add
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th>Session</th>
+              <th>Date & Time</th>
+              <th>Instructor</th>
+              <th>Status</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in recent_sessions %}
+            <tr>
+              <td>
+                <div class="fw-semibold text-dark">{{ s.title }}</div>
+                <small class="text-muted">{{ s.session_type }}</small>
+              </td>
+              <td>
+                <div>{{ s.date | date_format('%b %d') }}</div>
+                <small class="text-muted">{{ s.start_time | time_format }}</small>
+              </td>
+              <td>{{ s.teacher.full_name if s.teacher else 'Unassigned' }}</td>
+              <td>
+                {% if s.status == 'Completed' %}
+                  <span class="badge badge-soft-success">Completed</span>
+                {% elif s.status == 'Scheduled' %}
+                  <span class="badge badge-soft-primary">Scheduled</span>
+                {% else %}
+                  <span class="badge badge-soft-danger">{{ s.status }}</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a href="{{ url_for('sessions.view', session_id=s.id) }}" class="btn btn-sm btn-light p-1 px-2" title="View Session">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{{ url_for('sessions.mark_attendance', session_id=s.id) }}" class="btn btn-sm btn-outline-primary p-1 px-2" title="Mark Attendance">
+                  <i class="bi bi-check2-square"></i>
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No sessions scheduled yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Weekly Feedback -->
+  <div class="col-lg-6">
+    <div class="card-custom h-100">
+      <div class="card-header-custom">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-chat-quote-fill text-success"></i>
+          <span>Recent Weekly Feedback</span>
+        </div>
+        <a href="{{ url_for('feedback.create') }}" class="btn btn-sm btn-success py-1 px-2 small">
+          <i class="bi bi-plus-lg"></i> Add
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table-custom">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Teacher</th>
+              <th>Rating</th>
+              <th>Date</th>
+              <th class="text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in recent_feedbacks %}
+            <tr>
+              <td>
+                <a href="{{ url_for('students.view', student_id=f.student.id) }}" class="fw-semibold text-decoration-none text-dark">
+                  {{ f.student.full_name }}
+                </a>
+                <div class="small text-muted">{{ f.student.student_id }}</div>
+              </td>
+              <td>{{ f.teacher.full_name if f.teacher else 'N/A' }}</td>
+              <td>
+                <span class="badge {{ f.rating_badge_class }}">{{ f.rating }} ★</span>
+              </td>
+              <td class="small text-muted">{{ f.feedback_date | date_format('%b %d') }}</td>
+              <td class="text-end">
+                <a href="{{ url_for('feedback.view', feedback_id=f.id) }}" class="btn btn-sm btn-light p-1 px-2" title="View Feedback">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No feedback entries recorded yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // 1. Rating Distribution Chart
+  const ratingCtx = document.getElementById('feedbackRatingChart');
+  if (ratingCtx) {
+    new Chart(ratingCtx, {
+      type: 'bar',
+      data: {
+        labels: ['1 (Needs Imp.)', '2 (Below Avg)', '3 (Satisfactory)', '4 (Good)', '5 (Excellent)'],
+        datasets: [{
+          label: 'Total Feedback Entries',
+          data: {{ rating_counts | tojson }},
+          backgroundColor: [
+            '#ef4444',
+            '#f59e0b',
+            '#06b6d4',
+            '#0284c7',
+            '#10b981'
+          ],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Attendance Donut Chart
+  const donutCtx = document.getElementById('attendanceDonutChart');
+  if (donutCtx) {
+    new Chart(donutCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Present', 'Late', 'Absent'],
+        datasets: [{
+          data: [
+            {{ attendance_chart_data['Present'] }},
+            {{ attendance_chart_data['Late'] }},
+            {{ attendance_chart_data['Absent'] }}
+          ],
+          backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Report{% endblock %}
+{% block page_heading %}Attendance Analysis Report{% endblock %}
+
+{% block content %}
+<!-- Filter Card (Hidden in print) -->
+<div class="card-custom mb-4 no-print">
+  <div class="card-body-custom">
+    <form method="GET" action="{{ url_for('reports.attendance_report') }}" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">Student:</label>
+        <select name="student_id" class="form-select form-select-sm">
+          <option value="">-- All Students --</option>
+          {% for s in students %}
+            <option value="{{ s.id }}" {% if selected_student_id == s.id %}selected{% endif %}>{{ s.student_id }} - {{ s.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">Session:</label>
+        <select name="session_id" class="form-select form-select-sm">
+          <option value="">-- All Sessions --</option>
+          {% for sess in sessions %}
+            <option value="{{ sess.id }}" {% if selected_session_id == sess.id %}selected{% endif %}>{{ sess.date | date_format('%b %d') }} - {{ sess.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">From Date:</label>
+        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">To Date:</label>
+        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Apply</button>
+        {% if selected_student_id or selected_session_id or start_date or end_date %}
+          <a href="{{ url_for('reports.attendance_report') }}" class="btn btn-light btn-sm"><i class="bi bi-x-circle"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Print Header (Print only) -->
+<div class="print-header">
+  <h2 class="fw-bold mb-1">NGO MANAGEMENT APPLICATION</h2>
+  <h4>ATTENDANCE AUDIT REPORT</h4>
+  <div class="text-muted small">Generated on {{ current_year }}-08-14</div>
+</div>
+
+<!-- Summary KPI Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center">
+      <div class="text-muted small fw-bold text-uppercase">Total Marked</div>
+      <h3 class="fw-bold text-dark mb-0">{{ summary.total }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center border-start border-success border-4">
+      <div class="text-muted small fw-bold text-uppercase">Present</div>
+      <h3 class="fw-bold text-success mb-0">{{ summary.present }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center border-start border-warning border-4">
+      <div class="text-muted small fw-bold text-uppercase">Late</div>
+      <h3 class="fw-bold text-warning mb-0">{{ summary.late }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-custom p-3 text-center border-start border-danger border-4">
+      <div class="text-muted small fw-bold text-uppercase">Absent</div>
+      <h3 class="fw-bold text-danger mb-0">{{ summary.absent }}</h3>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance Records Table -->
+<div class="card-custom">
+  <div class="card-header-custom">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-calendar2-check-fill text-info"></i>
+      <span>Attendance Logs ({{ records | length }}) &bull; Overall Rate: <strong>{{ summary.rate }}%</strong></span>
+    </div>
+    <div class="d-flex gap-2 no-print">
+      <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="bi bi-printer"></i> Print</button>
+      <a href="{{ url_for('reports.attendance_report', student_id=selected_student_id, session_id=selected_session_id, teacher_id=selected_teacher_id, start_date=start_date, end_date=end_date, export='csv') }}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Export CSV</a>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Session</th>
+          <th>Student ID</th>
+          <th>Student Name</th>
+          <th>Class</th>
+          <th>Status</th>
+          <th>Remarks</th>
+          <th>Marked By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td class="text-nowrap">{{ r.session.date | date_format }}</td>
+          <td>
+            <a href="{{ url_for('sessions.view', session_id=r.session.id) }}" class="fw-semibold text-dark text-decoration-none">
+              {{ r.session.title }}
+            </a>
+          </td>
+          <td><span class="badge badge-soft-primary font-monospace">{{ r.student.student_id }}</span></td>
+          <td>
+            <a href="{{ url_for('students.view', student_id=r.student.id) }}" class="text-dark text-decoration-none fw-medium">
+              {{ r.student.full_name }}
+            </a>
+          </td>
+          <td>{{ r.student.grade_class or '-' }}</td>
+          <td>
+            {% if r.status == 'Present' %}
+              <span class="badge badge-soft-success">Present</span>
+            {% elif r.status == 'Late' %}
+              <span class="badge badge-soft-warning">Late</span>
+            {% else %}
+              <span class="badge badge-soft-danger">Absent</span>
+            {% endif %}
+          </td>
+          <td class="small text-muted">{{ r.remarks or '-' }}</td>
+          <td class="small text-muted">{{ r.marked_by.full_name if r.marked_by else 'Staff' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">No attendance records found matching filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

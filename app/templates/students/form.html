@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_heading %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="card-custom">
+      <div class="card-header-custom">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-person-badge text-primary"></i>
+          <span>Student Beneficiary Details</span>
+        </div>
+        <a href="{{ url_for('students.index') }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i> Back to List
+        </a>
+      </div>
+
+      <div class="card-body-custom">
+        <form method="POST" enctype="multipart/form-data">
+          {{ form.hidden_tag() }}
+
+          <div class="alert alert-info py-2 px-3 small mb-4 d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle-fill"></i>
+            <div>Unique Student ID is automatically formatted (e.g. <code>NGO-2026-0001</code>) and maintained sequentially.</div>
+          </div>
+
+          <h6 class="fw-bold text-primary mb-3"><i class="bi bi-person-lines-fill me-1"></i> Basic Identification</h6>
+          
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              {{ form.student_id.label(class="form-label") }}
+              {{ form.student_id(class="form-control bg-light font-monospace fw-bold text-primary") }}
+            </div>
+
+            <div class="col-md-8">
+              {{ form.full_name.label(class="form-label") }} <span class="text-danger">*</span>
+              {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
+              {% for error in form.full_name.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              {{ form.dob.label(class="form-label") }}
+              {{ form.dob(class="form-control" + (" is-invalid" if form.dob.errors else ""), type="date") }}
+              {% for error in form.dob.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="col-md-4">
+              {{ form.gender.label(class="form-label") }}
+              {{ form.gender(class="form-select") }}
+            </div>
+
+            <div class="col-md-4">
+              {{ form.status.label(class="form-label") }}
+              {{ form.status(class="form-select") }}
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-primary mb-3"><i class="bi bi-book-half me-1"></i> Academic & Enrollment Details</h6>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              {{ form.joining_date.label(class="form-label") }} <span class="text-danger">*</span>
+              {{ form.joining_date(class="form-control", type="date") }}
+            </div>
+
+            <div class="col-md-4">
+              {{ form.grade_class.label(class="form-label") }}
+              {{ form.grade_class(class="form-control", placeholder="e.g. Class 7, Level 2") }}
+            </div>
+
+            <div class="col-md-4">
+              {{ form.school_name.label(class="form-label") }}
+              {{ form.school_name(class="form-control", placeholder="e.g. Govt Middle School") }}
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-primary mb-3"><i class="bi bi-telephone-fill me-1"></i> Guardian & Contact Details</h6>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              {{ form.parent_name.label(class="form-label") }}
+              {{ form.parent_name(class="form-control", placeholder="Father / Mother / Guardian") }}
+            </div>
+
+            <div class="col-md-4">
+              {{ form.phone.label(class="form-label") }}
+              {{ form.phone(class="form-control", placeholder="Phone number") }}
+            </div>
+
+            <div class="col-md-4">
+              {{ form.email.label(class="form-label") }}
+              {{ form.email(class="form-control", placeholder="Email (if available)") }}
+              {% for error in form.email.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-4">
+            {{ form.address.label(class="form-label") }}
+            {{ form.address(class="form-control") }}
+          </div>
+
+          <h6 class="fw-bold text-primary mb-3"><i class="bi bi-image me-1"></i> Profile Photo & Notes</h6>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              {{ form.profile_photo.label(class="form-label") }}
+              {{ form.profile_photo(class="form-control" + (" is-invalid" if form.profile_photo.errors else "")) }}
+              <small class="text-muted">Supported formats: JPG, PNG, WEBP (Max 5MB)</small>
+              {% for error in form.profile_photo.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+              
+              {% if student and student.profile_photo %}
+                <div class="mt-2 d-flex align-items-center gap-2">
+                  <span class="small text-muted">Current photo:</span>
+                  <img src="{{ url_for('static', filename='uploads/' + student.profile_photo) }}" alt="Photo" class="avatar-sm">
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6">
+              {{ form.notes.label(class="form-label") }}
+              {{ form.notes(class="form-control") }}
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+            <a href="{{ url_for('students.index') }}" class="btn btn-light px-4">Cancel</a>
+            {{ form.submit(class="btn btn-primary px-4") }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

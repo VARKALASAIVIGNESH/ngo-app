@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Feedback Records{% endblock %}
+{% block page_heading %}Weekly Student Feedback{% endblock %}
+
+{% block content %}
+<!-- Filters Bar -->
+<div class="card-custom mb-4">
+  <div class="card-body-custom">
+    <form method="GET" action="{{ url_for('feedback.index') }}" class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <select name="student_id" class="form-select">
+          <option value="">-- All Students --</option>
+          {% for s in students %}
+            <option value="{{ s.id }}" {% if selected_student_id == s.id %}selected{% endif %}>{{ s.student_id }} - {{ s.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <select name="teacher_id" class="form-select">
+          <option value="">-- All Instructors --</option>
+          {% for t in teachers %}
+            <option value="{{ t.id }}" {% if selected_teacher_id == t.id %}selected{% endif %}>{{ t.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <select name="rating" class="form-select">
+          <option value="">-- All Ratings (1 to 5) --</option>
+          <option value="5" {% if selected_rating == 5 %}selected{% endif %}>5 - Excellent</option>
+          <option value="4" {% if selected_rating == 4 %}selected{% endif %}>4 - Good</option>
+          <option value="3" {% if selected_rating == 3 %}selected{% endif %}>3 - Satisfactory</option>
+          <option value="2" {% if selected_rating == 2 %}selected{% endif %}>2 - Below Average</option>
+          <option value="1" {% if selected_rating == 1 %}selected{% endif %}>1 - Needs Improvement</option>
+        </select>
+      </div>
+
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filter</button>
+        {% if selected_student_id or selected_teacher_id or selected_rating %}
+          <a href="{{ url_for('feedback.index') }}" class="btn btn-light"><i class="bi bi-x-circle"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-custom">
+  <div class="card-header-custom">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-chat-square-quote-fill text-success"></i>
+      <span>Weekly Feedback Submissions ({{ pagination.total }})</span>
+    </div>
+    <a href="{{ url_for('feedback.create') }}" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm">
+      <i class="bi bi-plus-lg me-1"></i> Submit Weekly Feedback
+    </a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Student</th>
+          <th>Subject / Focus</th>
+          <th>Rating & Assessment</th>
+          <th>Submitted By</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in feedbacks %}
+        <tr>
+          <td class="text-nowrap">{{ f.feedback_date | date_format }}</td>
+          <td>
+            <div class="fw-semibold">
+              <a href="{{ url_for('students.view', student_id=f.student.id) }}" class="text-dark text-decoration-none">
+                {{ f.student.full_name }}
+              </a>
+            </div>
+            <div class="small text-muted font-monospace">{{ f.student.student_id }}</div>
+          </td>
+          <td>
+            <div>{{ f.subject_area or 'General' }}</div>
+            <small class="text-muted">{{ f.attendance_obs }}</small>
+          </td>
+          <td>
+            <span class="badge {{ f.rating_badge_class }}">{{ f.rating }} ★ {{ f.rating_label }}</span>
+          </td>
+          <td>{{ f.teacher.full_name if f.teacher else 'N/A' }}</td>
+          <td class="text-end">
+            <div class="d-flex justify-content-end gap-1">
+              <a href="{{ url_for('feedback.view', feedback_id=f.id) }}" class="btn btn-sm btn-light p-1 px-2" title="View Full Report">
+                <i class="bi bi-eye text-info"></i>
+              </a>
+              {% if current_user.is_admin or f.teacher_id == current_user.id %}
+              <a href="{{ url_for('feedback.edit', feedback_id=f.id) }}" class="btn btn-sm btn-light p-1 px-2" title="Edit Feedback">
+                <i class="bi bi-pencil-square text-primary"></i>
+              </a>
+              <form method="POST" action="{{ url_for('feedback.delete', feedback_id=f.id) }}" onsubmit="return confirm('Are you sure you want to delete this feedback entry?');" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-sm btn-light p-1 px-2 text-danger" title="Delete Feedback">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">No feedback entries found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.pages > 1 %}
+  <div class="p-3 border-top d-flex justify-content-between align-items-center">
+    <div class="small text-muted">
+      Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} records)
+    </div>
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('feedback.index', page=pagination.prev_num, student_id=selected_student_id, teacher_id=selected_teacher_id, rating=selected_rating) }}">Previous</a>
+      </li>
+      {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+        {% if page_num %}
+          <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+            <a class="page-link" href="{{ url_for('feedback.index', page=page_num, student_id=selected_student_id, teacher_id=selected_teacher_id, rating=selected_rating) }}">{{ page_num }}</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+        <a class="page-link" href="{{ url_for('feedback.index', page=pagination.next_num, student_id=selected_student_id, teacher_id=selected_teacher_id, rating=selected_rating) }}">Next</a>
+      </li>
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

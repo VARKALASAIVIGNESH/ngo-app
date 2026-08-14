@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Feedback History Report{% endblock %}
+{% block page_heading %}Feedback History & Progress Report{% endblock %}
+
+{% block content %}
+<!-- Filters Bar (Hidden in print) -->
+<div class="card-custom mb-4 no-print">
+  <div class="card-body-custom">
+    <form method="GET" action="{{ url_for('reports.feedback_report') }}" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">Student:</label>
+        <select name="student_id" class="form-select form-select-sm">
+          <option value="">-- All Students --</option>
+          {% for s in students %}
+            <option value="{{ s.id }}" {% if selected_student_id == s.id %}selected{% endif %}>{{ s.student_id }} - {{ s.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small fw-bold">Instructor:</label>
+        <select name="teacher_id" class="form-select form-select-sm">
+          <option value="">-- All Instructors --</option>
+          {% for t in teachers %}
+            <option value="{{ t.id }}" {% if selected_teacher_id == t.id %}selected{% endif %}>{{ t.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">Rating:</label>
+        <select name="rating" class="form-select form-select-sm">
+          <option value="">-- All Ratings --</option>
+          <option value="5" {% if selected_rating == 5 %}selected{% endif %}>5 - Excellent</option>
+          <option value="4" {% if selected_rating == 4 %}selected{% endif %}>4 - Good</option>
+          <option value="3" {% if selected_rating == 3 %}selected{% endif %}>3 - Satisfactory</option>
+          <option value="2" {% if selected_rating == 2 %}selected{% endif %}>2 - Below Avg</option>
+          <option value="1" {% if selected_rating == 1 %}selected{% endif %}>1 - Needs Imp.</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small fw-bold">From Date:</label>
+        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Apply</button>
+        {% if selected_student_id or selected_teacher_id or selected_rating or start_date %}
+          <a href="{{ url_for('reports.feedback_report') }}" class="btn btn-light btn-sm"><i class="bi bi-x-circle"></i></a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Print Header (Print only) -->
+<div class="print-header">
+  <h2 class="fw-bold mb-1">NGO MANAGEMENT APPLICATION</h2>
+  <h4>FEEDBACK & EVALUATION HISTORY AUDIT</h4>
+  <div class="text-muted small">Generated on {{ current_year }}-08-14</div>
+</div>
+
+<!-- Summary Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card-custom p-3 text-center">
+      <div class="text-muted small fw-bold text-uppercase">Total Feedback Records</div>
+      <h3 class="fw-bold text-dark mb-0">{{ total_feedbacks }}</h3>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card-custom p-3 text-center border-start border-warning border-4">
+      <div class="text-muted small fw-bold text-uppercase">Average Rating Score</div>
+      <h3 class="fw-bold text-warning mb-0">{{ avg_rating }} <span class="fs-6 text-muted">/ 5.0</span></h3>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Table -->
+<div class="card-custom">
+  <div class="card-header-custom">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-chat-square-quote-fill text-success"></i>
+      <span>Evaluation Logs ({{ records | length }})</span>
+    </div>
+    <div class="d-flex gap-2 no-print">
+      <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm"><i class="bi bi-printer"></i> Print</button>
+      <a href="{{ url_for('reports.feedback_report', student_id=selected_student_id, teacher_id=selected_teacher_id, rating=selected_rating, start_date=start_date, end_date=end_date, export='csv') }}" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Export CSV</a>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table-custom">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Student</th>
+          <th>Instructor</th>
+          <th>Subject / Focus</th>
+          <th>Rating</th>
+          <th>Academic & Behaviour Notes</th>
+          <th>Strengths & Improvements</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in records %}
+        <tr>
+          <td class="text-nowrap">{{ f.feedback_date | date_format }}</td>
+          <td>
+            <a href="{{ url_for('students.view', student_id=f.student.id) }}" class="fw-semibold text-dark text-decoration-none">
+              {{ f.student.full_name }}
+            </a>
+            <div class="small text-muted font-monospace">{{ f.student.student_id }}</div>
+          </td>
+          <td>{{ f.teacher.full_name if f.teacher else 'Staff' }}</td>
+          <td>{{ f.subject_area or 'General' }}</td>
+          <td>
+            <span class="badge {{ f.rating_badge_class }}">{{ f.rating }} ★</span>
+          </td>
+          <td class="small">
+            {% if f.academic_progress %}
+              <div><strong>Acad:</strong> {{ f.academic_progress }}</div>
+            {% endif %}
+            {% if f.behaviour %}
+              <div class="text-muted"><strong>Behav:</strong> {{ f.behaviour }}</div>
+            {% endif %}
+          </td>
+          <td class="small">
+            {% if f.strengths %}
+              <div class="text-success"><i class="bi bi-plus-circle me-1"></i>{{ f.strengths }}</div>
+            {% endif %}
+            {% if f.improvement_areas %}
+              <div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ f.improvement_areas }}</div>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">No feedback entries found matching filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
