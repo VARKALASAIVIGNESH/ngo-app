@@ -2,21 +2,27 @@ import os
 import sys
 
 # Ensure parent directory is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 from app import create_app
 from app.extensions import db
 from app.models import User
-from seed import seed_database
+from seed import populate_seed_data
 
-# Create production app instance
-app = create_app(os.environ.get('FLASK_ENV', 'production'))
+# Create application
+app = create_app('production')
 
-# Auto initialize and seed SQLite on cold start if database is new
+# Auto-initialize SQLite database in /tmp if not created yet
 with app.app_context():
-    db.create_all()
     try:
-        if User.query.count() == 0:
-            seed_database()
+        db.create_all()
+        # Seed default users if database is empty
+        if User.query.filter_by(username='srinivas').first() is None:
+            populate_seed_data(db)
     except Exception as e:
-        pass
+        print(f"Error during Vercel startup init: {e}")
+
+# Vercel entry point
+handler = app

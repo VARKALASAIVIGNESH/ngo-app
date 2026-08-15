@@ -8,22 +8,41 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
+def get_safe_storage_dir(subpath):
+    """
+    Returns a writable directory path.
+    Tries project local path first. If read-only (e.g. Vercel serverless), falls back to /tmp.
+    """
+    # If explicitly running on Vercel
+    if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+        tmp_dir = os.path.join('/tmp', subpath)
+        try:
+            os.makedirs(tmp_dir, exist_ok=True)
+            return tmp_dir
+        except Exception:
+            return '/tmp'
+
+    local_dir = os.path.join(BASE_DIR, subpath)
+    try:
+        os.makedirs(local_dir, exist_ok=True)
+        # Test write capability
+        test_file = os.path.join(local_dir, '.write_check')
+        with open(test_file, 'w') as f:
+            f.write('ok')
+        os.remove(test_file)
+        return local_dir
+    except (OSError, PermissionError):
+        tmp_dir = os.path.join('/tmp', subpath)
+        os.makedirs(tmp_dir, exist_ok=True)
+        return tmp_dir
+
+
 class Config:
     """Base configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'ngo-app-secret-key-default-2026-development')
     
-    # Check if running on Vercel serverless environment
-    IS_VERCEL = os.environ.get('VERCEL') == '1' or 'VERCEL' in os.environ
-    
-    if IS_VERCEL:
-        INSTANCE_DIR = '/tmp'
-        UPLOAD_FOLDER = '/tmp/uploads'
-    else:
-        INSTANCE_DIR = os.path.join(BASE_DIR, 'instance')
-        UPLOAD_FOLDER = os.path.join(BASE_DIR, 'app', 'static', 'uploads')
-
-    os.makedirs(INSTANCE_DIR, exist_ok=True)
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    INSTANCE_DIR = get_safe_storage_dir('instance')
+    UPLOAD_FOLDER = get_safe_storage_dir(os.path.join('app', 'static', 'uploads'))
     
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL',
@@ -34,7 +53,6 @@ class Config:
     MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 5 * 1024 * 1024))  # 5 MB
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     
-    # Items per page for pagination
     ITEMS_PER_PAGE = 10
 
 
@@ -46,8 +64,7 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
-    # Ensure SECRET_KEY is set in production
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'ngo-production-fallback-key-should-be-overridden')
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'ngo-production-secret-key-srinivas-2026')
 
 
 class TestingConfig(Config):
@@ -61,5 +78,5 @@ config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
     'testing': TestingConfig,
-    'default': DevelopmentConfig
+    'default': ProductionConfig if os.environ.get('VERCEL') else DevelopmentConfig
 }
