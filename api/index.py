@@ -1,7 +1,7 @@
 import os
 import sys
 
-# Ensure parent directory is in sys.path
+# Ensure root directory is in sys.path
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -23,6 +23,3 @@ with app.app_context():
             populate_seed_data(db)
     except Exception as e:
         print(f"Error during Vercel startup init: {e}")
-
-# Vercel entry point
-handler = app

@@ -6,15 +6,27 @@ from app.extensions import db, login_manager, csrf
 
 def create_app(config_name='default'):
     """Application factory pattern."""
-    app = Flask(__name__)
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    template_dir = os.path.join(base_dir, 'app', 'templates')
+    static_dir = os.path.join(base_dir, 'app', 'static')
+    
+    app = Flask(
+        __name__,
+        template_folder=template_dir,
+        static_folder=static_dir,
+        static_url_path='/static'
+    )
     
     # Load configuration
     app_config = config.get(config_name, config['default'])
     app.config.from_object(app_config)
     
     # Ensure upload and instance directories exist
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['INSTANCE_DIR'], exist_ok=True)
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(app.config['INSTANCE_DIR'], exist_ok=True)
+    except Exception:
+        pass
     
     # Initialize extensions
     db.init_app(app)
